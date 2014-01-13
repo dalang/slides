@@ -187,7 +187,7 @@ it went `#1`, `#2`, `#4` and `#3`.
 So when dealing with **related resources**, we have to express their relationships.
 We usually declare resource relationship with **require** metaparameters.
 
-## troubleshooting
+## Troubleshooting
 
 * create .pp file on agent node with you own manifest, such as test.pp
 * Start Command Prompt with Puppet (run in 32-bit process)
