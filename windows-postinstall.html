@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+
+<title>Introduce to Windows Postinstall</title>
+
+<meta name="description" content="Introduce to Windows Postinstall">
+
+  <meta name="author" content="Dong Guoxing (gxdong@ctrip.com)" />
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<link rel="stylesheet" href="css/reveal.min.css">
+  <link rel="stylesheet" href="css/theme/night.css" id="theme">
+
+
+<!-- For syntax highlighting -->
+  <link rel="stylesheet" href="lib/css/zenburn.css">
+
+<!-- For Customized Design-->
+<link rel="stylesheet" href="css/custom.css">
+
+<!-- If the query includes 'print-pdf', use the PDF print sheet -->
+<script>
+  document.write( '<link rel="stylesheet" href="css/print/' +
+    ( window.location.search.match( /print-pdf/gi ) ? 'pdf' : 'paper' ) +
+    '.css" type="text/css" media="print">' );
+</script>
+
+<!--[if lt IE 9]>
+<script src="lib/js/html5shiv.js"></script>
+<![endif]-->
+</head>
+
+<body>
+
+<div class="reveal">
+
+<!-- Any section element inside of this container is displayed as a slide -->
+<div class="slides">
+
+<section>
+<h1>Introduce to Windows Postinstall</h1>
+<h3>Dong Guoxing (gxdong@ctrip.com)</h3>
+<p>
+<h4>2014.1.13</h4>
+</p>
+</section>
+
+
+<section id="agenda" class="level2">
+<h2>Agenda</h2>
+<ul>
+<li>Components involved in Implementation</li>
+<li>Scripts in Postinstall</li>
+<li>Windows Postinstall Workflow</li>
+<li>Dive into Puppet
+<ul>
+<li>Master/Agent mode</li>
+<li>Puppet on Windows</li>
+<li>Example</li>
+</ul></li>
+<li>Customize Scripts</li>
+</ul>
+</section>
+<section id="components" class="level2">
+<h2>Components</h2>
+<p>In our Windows Postinstall Provisioning, the following components will be involved:</p>
+<ul>
+<li>Razor Server
+<ul>
+<li>Control Baremetal Provisioning Process</li>
+</ul></li>
+<li>Samba Server
+<ul>
+<li>Host files (drivers, installers and scripts) used during provisioning</li>
+<li>Serve as Share Folder in Windows Postinstall</li>
+</ul></li>
+<li>Puppet
+<ul>
+<li>master node</li>
+<li>agent nodes</li>
+</ul></li>
+</ul>
+<p>Normally, razor, samba and puppet master will be hosted on the same node.</p>
+</section>
+<section id="scripts" class="level1">
+<h1>Scripts</h1>
+<section id="types" class="level2">
+<h2>Types</h2>
+<p>We divide the scripts into <strong>two</strong> types:</p>
+<ul>
+<li>Dynamic
+<ul>
+<li>Parameters passed from Front-End</li>
+<li>Each provision instance has his own values</li>
+</ul></li>
+<li>Static
+<ul>
+<li>Immutable</li>
+<li>All provision instances shared</li>
+</ul></li>
+</ul>
+</section>
+<section id="comparision" class="level2">
+<h2>Comparision</h2>
+<p>In aspect of location, obtain and invoke method.</p>
+<p><br/></p>
+<hr />
+<table><thead>
+<tr>
+<th>
+Aspects
+</th>
+<th>
+Dynamic
+</th>
+<th>
+static
+</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>
+<em>Location</em>
+</td>
+<td>
+.erb Templates in Razor
+</td>
+<td>
+Samba
+</td>
+</tr>
+<tr>
+<td>
+<em>Obtain-method</em>
+</td>
+<td>
+send http request to Razor
+</td>
+<td>
+copy from Samba
+</td>
+</tr>
+<tr>
+<td>
+<em>Invoke-method</em>
+</td>
+<td>
+Puppet agent service
+</td>
+<td>
+Puppet agent service
+</td>
+</tr>
+</tbody></table>
+
+<hr />
+</section>
+</section>
+<section id="section" class="level1">
+<h1></h1>
+<section id="postinstall-workflow" class="level2">
+<h2>Postinstall Workflow</h2>
+<p>flow chat</p>
+<iframe frameborder='0' src='https://mural.ly/mural/dalang/1389535010456/embed?b=2912&amp;l=1308&amp;r=6408&amp;t=732' width='510px' height='315px'></iframe>
+
+<p>checkout <a href="http://mrl.li/1eOjfCs">the complete view of the flow chat</a></p>
+<!-- Dive into Puppet -->
+</section>
+</section>
+<section id="section-1" class="level1">
+<h1></h1>
+<section id="masteragent-mode" class="level2">
+<h2>master/agent mode</h2>
+<figure>
+<img src="fig/manifest_to_defined_state_unified.png" alt="Compilation" /><figcaption>Compilation</figcaption>
+</figure>
+</section>
+<section id="masteragent-mode-contd" class="level2">
+<h2>master/agent mode (Cont'd)</h2>
+<ul>
+<li>Puppet agent runs as a service, and triggers a Puppet run about every half hour (configurable).</li>
+<li>Puppet agent requests a pre-compiled catalog from a puppet master.</li>
+<li>The puppet master always use one special manifest (site.pp), to compile a catalog and sends back to the agent.</li>
+<li>After getting the catalog, the agent applies it.</li>
+</ul>
+</section>
+<section id="puppet-on-windows" class="level2">
+<h2>Puppet on Windows</h2>
+<ul>
+<li>Puppet runs as a 32-bit process.
+<ul>
+<li>when run on 64-bit windows, the <a href="http://msdn.microsoft.com/en-us/library/aa384187(v=vs.85).aspx">File System Redirector</a> will redirect access to <code>%windir\system32</code> to <code>%windir%\SysWOW64</code> instead</li>
+</ul></li>
+<li><a href="https://forge.puppetlabs.com/puppetlabs/reboot">reboot module from PuppetLabs</a>
+<ul>
+<li>Check if need OS reboot after Patching</li>
+<li>Do reboot operation if needed</li>
+<li>After OS restart, puppet agent service will be trigger again.</li>
+<li>Exit loop until there is no patches to be install.</li>
+</ul></li>
+</ul>
+</section>
+<section id="puppet-on-windows-contd" class="level2">
+<h2>Puppet on Windows (Cont'd)</h2>
+<p>Puppet Resources</p>
+<ul>
+<li>Package
+<ul>
+<li>mainly used to install software</li>
+</ul></li>
+</ul>
+<pre class="sourceCode ruby"><code class="sourceCode ruby">package { <span class="st">&quot;mcafee-agent&quot;</span>:
+  name            =&gt; <span class="st">&quot;McAfee Agent&quot;</span>, <span class="co"># The software&#39;s name</span>
+  <span class="kw">ensure</span>          =&gt; present,
+  provider        =&gt; windows,
+  source          =&gt; <span class="st">&#39;C:\oem\McAgent\setup\FramePkg.exe&#39;</span>, <span class="co"># The software installer location</span>
+  install_options =&gt; [ <span class="co"># additional options to pass when installing</span>
+    <span class="st">&#39;/SILENT&#39;</span>,
+    {
+      <span class="st">&#39;INSTALL&#39;</span>   =&gt; <span class="st">&#39;AGENT&#39;</span>,
+    }
+  ],
+  require         =&gt; <span class="dt">Exec</span>[<span class="st">&quot;checkin&quot;</span>],
+}</code></pre>
+</section>
+<section id="puppet-on-windows-contd-1" class="level2">
+<h2>Puppet on Windows (Cont'd)</h2>
+<p>Puppet Resources</p>
+<ul>
+<li>Exec
+<ul>
+<li>run commands directly or execute a .bat file</li>
+</ul></li>
+</ul>
+<pre class="sourceCode ruby"><code class="sourceCode ruby">exec { <span class="st">&quot;config-os-template&quot;</span>:
+  command =&gt; <span class="st">&#39;C:\oem\svrtemp\svrtemp.cmd&#39;</span>,
+  path    =&gt; <span class="st">&#39;C:\Windows\System32&#39;</span>,
+  require =&gt; <span class="dt">Package</span>[<span class="st">&#39;megaraid-manager&#39;</span>],
+}
+
+exec { <span class="st">&quot;add-wmi-user&quot;</span>:
+  command =&gt; <span class="st">&#39;C:\oem\wmiUser\adduser.cmd&#39;</span>,
+  require =&gt; <span class="dt">Exec</span>[<span class="st">&quot;config-os-template&quot;</span>],
+}</code></pre>
+</section>
+<section id="puppet-on-windows-contd-2" class="level2">
+<h2>Puppet on Windows (Cont'd)</h2>
+<p>Exec Resource</p>
+<blockquote>
+<p>Executes external commands. It is critical that all commands executed using this mechanism can be run multiple times without harm, i.e., they are idempotent.</p>
+</blockquote>
+<blockquote>
+<p>There is a strong tendency to use exec to do whatever work Puppet can’t already do; while this is obviously acceptable (and unavoidable) in the short term, it is highly recommended to migrate work from exec to native Puppet types as quickly as possible.</p>
+</blockquote>
+</section>
+<section id="resource-ordering" class="level2">
+<h2>Resource Ordering</h2>
+<pre class="sourceCode ruby"><code class="sourceCode ruby">file {<span class="st">&#39;/tmp/test1&#39;</span>: <span class="co">#1</span>
+  <span class="kw">ensure</span>  =&gt; present,
+  content =&gt; <span class="st">&quot;Hi.&quot;</span>,
+}
+
+file {<span class="st">&#39;/tmp/test2&#39;</span>: <span class="co">#2</span>
+  <span class="kw">ensure</span> =&gt; directory,
+  mode   =&gt; <span class="dv">644</span>,
+}
+
+notify {<span class="st">&quot;I&#39;m notifying you.&quot;</span>:} <span class="co">#3</span>
+notify {<span class="st">&quot;So am I!&quot;</span>:} <span class="co">#4</span></code></pre>
+<p>When we ran this, the resources weren’t synced in the order we wrote them: it went <code>#1</code>, <code>#2</code>, <code>#4</code> and <code>#3</code>.</p>
+<p>So when dealing with <strong>related resources</strong>, we have to express their relationships. We usually declare resource relationship with <strong>require</strong> metaparameters.</p>
+</section>
+<section id="troubleshooting" class="level2">
+<h2>troubleshooting</h2>
+<ul>
+<li>create .pp file on agent node with you own manifest, such as test.pp</li>
+<li>Start Command Prompt with Puppet (run in 32-bit process)</li>
+<li>run &quot;puppet apply test.pp --debug --trace --verbose&quot; in Puppet Console (output debug info)</li>
+</ul>
+<hr />
+<p>P.S. when invoke .bat file, all commands must run in <strong>non-interactive (or silence) mode</strong>.</p>
+</section>
+<section id="example-1" class="level2">
+<h2>Example 1</h2>
+<p>Zabbix Installation failed</p>
+<pre class="bat"><code>:: /oem/zabbix/zabbix_agent_install.bat
+@ECHO OFF
+pushd &quot;%~dp0&quot;
+
+md &quot;C:\Program Files\Zabbixagentd\&quot;
+xcopy /Y zabbix_agentd.conf &quot;C:\Program Files\Zabbixagentd\&quot;
+xcopy /Y zabbix_agentd.exe &quot;C:\Program Files\Zabbixagentd\&quot;
+
+&quot;%programfiles%&quot;\Zabbixagentd\zabbix_agentd.exe --install -c &quot;%programfiles%&quot;\Zabbixagentd\zabbix_agentd.conf
+&quot;%programfiles%&quot;\Zabbixagentd\zabbix_agentd.exe --start -c &quot;%programfiles%&quot;\Zabbixagentd\zabbix_agentd.conf
+
+popd
+exit /b</code></pre>
+<ul>
+<li>HINT: The Value of &quot;%programfiles%&quot; is &quot;C:\Program Files (x86)\&quot; in Puppet context</li>
+</ul>
+</section>
+<section id="example-2" class="level2">
+<h2>Example 2</h2>
+<p>Puppet agent service hanged while installing MegaRAID Storage Manager (MSM)</p>
+<pre class="text"><code>To install the product in a silent mode, use the following commands:
+       a. Install the VC Redist Package from command line &quot;vcredist_x86.exe /Q&quot;,
+          vcredist_x86.exe is available in \DISK1\ISSetupPrerequisites\VC Redist Installation.
+           If vcredist_x86.exe is already installed, run the setup command.
+       b. setup.exe /s /v&quot;/qn SETUPTYPE=&quot;&lt;setuptype&gt;&quot; [REMOVEUTIL=&quot;&lt;util1&gt;[,&lt;util2&gt;]&quot;]&quot;  from the installation disk.
+           The REMOVEUTIL option will remove the utility from install list.
+           &lt;utilx&gt; can be either Popup or SNMP
+           &lt;setuptype&gt; can be StandAlone</code></pre>
+<ul>
+<li>HINT: Missing VC Redist Package, and MSM setup.exe would try to install it automaticly, <strong>but NOT in silence mode</strong>.</li>
+</ul>
+</section>
+</section>
+<section id="section-2" class="level1">
+<h1></h1>
+<section id="customize-scripts" class="level2">
+<h2>Customize Scripts</h2>
+<ul>
+<li>Which type of scripts?
+<ul>
+<li>Dynamic: add (or edit) .erb template file to Razor</li>
+<li>Static: add (or edit) .bat file to Samba Server</li>
+</ul></li>
+<li>Then modify Puppet manifest to invoke these scripts properly.</li>
+</ul>
+</section>
+<section id="sample-case" class="level2">
+<h2>Sample Case</h2>
+<p>HuaWei Server(windows2k8) nic teaming</p>
+<ul>
+<li>TODO
+<ol type="1">
+<li>Install <code>Broadcom Management Programs</code></li>
+<li>Invoke <code>bcmteam.cmd</code></li>
+</ol></li>
+<li>Static Scripts
+<ul>
+<li>Copy required files to Samba Server</li>
+</ul></li>
+</ul>
+</section>
+<section id="broadcom-management-programs" class="level2">
+<h2>Broadcom Management Programs</h2>
+<pre class="sourceCode ruby"><code class="sourceCode ruby">package { <span class="st">&quot;broadcom&quot;</span>:
+  name =&gt; <span class="st">&#39;Broadcom Management Programs&#39;</span>,
+  <span class="kw">ensure</span> =&gt; present,
+  provider =&gt; windows,
+  source =&gt; <span class="st">&#39;C:\oem\huawei\BCM\BCSP.exe&#39;</span>,
+  install_options =&gt; [<span class="st">&#39;/s&#39;</span>, <span class="st">&#39;/v/qn&#39;</span>],
+  require =&gt; <span class="dt">Package</span>[<span class="st">&#39;megaraid-manager&#39;</span>],
+}</code></pre>
+</section>
+<section id="invoke-bcmteam.cmd" class="level2">
+<h2>Invoke <code>bcmteam.cmd</code></h2>
+<pre class="sourceCode ruby"><code class="sourceCode ruby">exec { <span class="st">&quot;nic-team&quot;</span>:
+  command =&gt; <span class="st">&#39;C:\oem\WinTeam\bcmteam.cmd 1&#39;</span>,
+  require =&gt; <span class="dt">Exec</span>[<span class="st">&quot;turn-off-nic&quot;</span>],
+}</code></pre>
+</section>
+</section>
+<section id="section-3" class="level1">
+<h1></h1>
+<section id="references" class="level2">
+<h2>References</h2>
+<ul>
+<li><a href="https://mural.ly/#/dalang/1389535010456">Postinstall Workflow of Windows Provision</a></li>
+<li><a href="http://docs.puppetlabs.com/references/latest/type.html">Puppet Resource Type Reference</a></li>
+<li><a href="http://docs.puppetlabs.com/windows/writing.html">Writing Manifests for Windows</a></li>
+<li><a href="http://docs.puppetlabs.com/windows/troubleshooting.html">Troubleshooting Puppet on Windows</a></li>
+</ul>
+</section>
+</section>
+<section id="section-4" class="level1">
+<h1></h1>
+<section id="thanks" class="level2">
+<h2>Thanks</h2>
+<blockquote>
+<p>Q&amp;A</p>
+</blockquote>
+</section>
+</section>
+</div>
+
+<script src="lib/js/head.min.js"></script>
+<script src="js/reveal.min.js"></script>
+
+<script>
+  // Full list of configuration options available here:
+  // https://github.com/hakimel/reveal.js#configuration
+  Reveal.initialize({
+    controls: true,
+    progress: true,
+    history: true,
+    center: false,
+
+  // available themes are in /css/theme
+      theme: Reveal.getQueryHash().theme || 'night',
+  
+  // default/cube/page/concave/zoom/linear/fade/none
+      transition: Reveal.getQueryHash().transition || 'linear',
+  
+  // Optional libraries used to extend on reveal.js
+  dependencies: [
+    { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+    { src: 'plugin/markdown/showdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+    { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+    { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+    { src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+    { src: 'plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+    // { src: 'plugin/remotes/remotes.js', async: true, condition: function() { return !!document.body.classList; } }
+  ]
+  });
+
+</script>
+
+</body>
+</html>
