@@ -195,7 +195,7 @@ We usually declare resource relationship with **require** metaparameters.
 
 ***
 
-P.S. when invoke .bat file, all commands must run in **non-interactive (or silence) mode**.
+**P.S.** when invoke .bat file, all commands must run in **non-interactive (or silence) mode**.
 
 ## Example 1
 Zabbix Installation failed
@@ -271,6 +271,32 @@ package { "broadcom":
 ## Invoke `bcmteam.cmd`
 
 ```ruby
+exec { "nic-team":
+  command => 'C:\oem\WinTeam\bcmteam.cmd 1',
+  require => Exec["turn-off-nic"],
+}
+```
+
+## Test in Puppet Standalone Mode
+
+run `"puppet apply test.pp --debug --trace --verbose"` on Puppet Console
+
+```ruby
+# test.pp
+
+package { "broadcom":
+  name => 'Broadcom Management Programs',
+  ensure => present,
+  provider => windows,
+  source => 'C:\oem\huawei\BCM\BCSP.exe',
+  install_options => ['/s', '/v/qn'],
+}
+
+exec { "turn-off-nic":
+command => 'C:\oem\NICOff\NICOff.cmd',
+require => Package['broadcom'],
+}
+
 exec { "nic-team":
   command => 'C:\oem\WinTeam\bcmteam.cmd 1',
   require => Exec["turn-off-nic"],

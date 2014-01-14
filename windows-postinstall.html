@@ -284,7 +284,7 @@ notify {<span class="st">&quot;So am I!&quot;</span>:} <span class="co">#4</span
 <li>run &quot;puppet apply test.pp --debug --trace --verbose&quot; in Puppet Console (output debug info)</li>
 </ul>
 <hr />
-<p>P.S. when invoke .bat file, all commands must run in <strong>non-interactive (or silence) mode</strong>.</p>
+<p><strong>P.S.</strong> when invoke .bat file, all commands must run in <strong>non-interactive (or silence) mode</strong>.</p>
 </section>
 <section id="example-1" class="level2">
 <h2>Example 1</h2>
@@ -364,6 +364,29 @@ exit /b</code></pre>
 <section id="invoke-bcmteam.cmd" class="level2">
 <h2>Invoke <code>bcmteam.cmd</code></h2>
 <pre class="sourceCode ruby"><code class="sourceCode ruby">exec { <span class="st">&quot;nic-team&quot;</span>:
+  command =&gt; <span class="st">&#39;C:\oem\WinTeam\bcmteam.cmd 1&#39;</span>,
+  require =&gt; <span class="dt">Exec</span>[<span class="st">&quot;turn-off-nic&quot;</span>],
+}</code></pre>
+</section>
+<section id="test-in-puppet-standalone-mode" class="level2">
+<h2>Test in Puppet Standalone Mode</h2>
+<p>run <code>&quot;puppet apply test.pp --debug --trace --verbose&quot;</code> on Puppet Console</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="co"># test.pp</span>
+
+package { <span class="st">&quot;broadcom&quot;</span>:
+  name =&gt; <span class="st">&#39;Broadcom Management Programs&#39;</span>,
+  <span class="kw">ensure</span> =&gt; present,
+  provider =&gt; windows,
+  source =&gt; <span class="st">&#39;C:\oem\huawei\BCM\BCSP.exe&#39;</span>,
+  install_options =&gt; [<span class="st">&#39;/s&#39;</span>, <span class="st">&#39;/v/qn&#39;</span>],
+}
+
+exec { <span class="st">&quot;turn-off-nic&quot;</span>:
+command =&gt; <span class="st">&#39;C:\oem\NICOff\NICOff.cmd&#39;</span>,
+require =&gt; <span class="dt">Package</span>[<span class="st">&#39;broadcom&#39;</span>],
+}
+
+exec { <span class="st">&quot;nic-team&quot;</span>:
   command =&gt; <span class="st">&#39;C:\oem\WinTeam\bcmteam.cmd 1&#39;</span>,
   require =&gt; <span class="dt">Exec</span>[<span class="st">&quot;turn-off-nic&quot;</span>],
 }</code></pre>
